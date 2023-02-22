@@ -17,9 +17,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+use clap::Arg;
 use std::io::Write;
 use std::process::exit;
-use clap::Arg;
 
 /// returns a character from a character set that corresponds to given brightness
 fn get_char(charset: &[char], brightness: &u8) -> char {
@@ -38,12 +38,11 @@ fn charify(charset: &[char], brightness_map: &image::GrayImage) -> Vec<char> {
     return character_map;
 }
 
-
 fn main() {
     let mut charset: Vec<char> = vec![' ', '░', '▒', '▓', '█'];
 
     let matches = clap::Command::new("charify")
-        .version("0.1")
+        .version("0.2")
         .author("Kasyanov Nikolay Alexeyevich (Unbewohnte)")
         .arg(
             Arg::new("image")
@@ -52,7 +51,7 @@ fn main() {
                 .required(true)
                 .long("image")
                 .short('i')
-                .index(1)
+                .index(1),
         )
         .arg(
             Arg::new("destination")
@@ -61,7 +60,7 @@ fn main() {
                 .required(true)
                 .long("destination")
                 .short('d')
-                .index(2)
+                .index(2),
         )
         .arg(
             Arg::new("new_dimensions")
@@ -69,7 +68,7 @@ fn main() {
                 .takes_value(true)
                 .required(false)
                 .long("new_dimensions")
-                .short('r')
+                .short('r'),
         )
         .arg(
             Arg::new("charset")
@@ -78,7 +77,7 @@ fn main() {
                 .required(false)
                 .long("charset")
                 .short('c')
-                .default_value(&*format!("{:?}", charset))
+                .default_value(" ░▒▓█"),
         )
         .get_matches();
 
@@ -123,15 +122,13 @@ fn main() {
         }
     }
     match destination_file_path.parent() {
-        Some(path) => {
-            match std::fs::create_dir_all(path) {
-                Ok(_) => {}
-                Err(e) => {
-                    eprintln!("[ERROR] could not create \"{}\": {}", path.display(), e);
-                    exit(1);
-                }
+        Some(path) => match std::fs::create_dir_all(path) {
+            Ok(_) => {}
+            Err(e) => {
+                eprintln!("[ERROR] could not create \"{}\": {}", path.display(), e);
+                exit(1);
             }
-        }
+        },
         None => {}
     }
 
@@ -148,19 +145,20 @@ fn main() {
 
     // work with new dimensions if present
     match matches.value_of("new_dimensions") {
-        Some(new_dimensions) => {
-            match new_dimensions.split_once('x') {
-                Some((nw_str, nh_str)) => {
-                    let new_width: u32 = nw_str.parse::<u32>().unwrap();
-                    let new_height: u32 = nh_str.parse::<u32>().unwrap();
+        Some(new_dimensions) => match new_dimensions.split_once('x') {
+            Some((nw_str, nh_str)) => {
+                let new_width: u32 = nw_str.parse::<u32>().unwrap();
+                let new_height: u32 = nh_str.parse::<u32>().unwrap();
 
-                    source_image = image::imageops::resize(
-                        &source_image, new_width, new_height,
-                        image::imageops::FilterType::Lanczos3);
-                }
-                None => {}
+                source_image = image::imageops::resize(
+                    &source_image,
+                    new_width,
+                    new_height,
+                    image::imageops::FilterType::Lanczos3,
+                );
             }
-        }
+            None => {}
+        },
         None => {}
     }
 
@@ -179,7 +177,11 @@ fn main() {
     let character_map = charify(&charset, &source_image);
     for y in 0..source_image.height() {
         for x in 0..source_image.width() {
-            match write!(destination_file, "{}", character_map[(y * source_image.width() + x) as usize]) {
+            match write!(
+                destination_file,
+                "{}",
+                character_map[(y * source_image.width() + x) as usize] as char
+            ) {
                 Ok(_) => {}
                 Err(e) => {
                     eprintln!("[ERROR] error writing to destination file: {}", e)
